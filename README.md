@@ -1,3 +1,3 @@
-# legacyctl
+# deployer
 
-kubectl equivalent for legacy deployments
+deployer component with http endpoint for webhooks
