@@ -16,17 +16,15 @@ const port = "8082"
 
 const request = `
 {
-	"dir": "dirTest",
-	"rev": "revTest2"
+	"dir": "/home/anliksim/codebase/bsc-env",
+	"rev": "ff755b0 Implement policies"
 }
 `
 
 func TestDeployments(t *testing.T) {
-
 	deploymentRequest := config.ParseJson([]byte(request))
 	log.Printf("%v\n", deploymentRequest)
 
-	getDeployments()
 	postDeployments([]byte(request))
 	getDeployments()
 }
@@ -66,7 +64,7 @@ func handle(resp *http.Response, callback func([]byte)) {
 }
 
 func deploymentsUrl() string {
-	return serverUrl("deployments")
+	return serverUrl("v1/deployments")
 }
 
 func serverUrl(path string) string {
