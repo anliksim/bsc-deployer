@@ -17,6 +17,6 @@ func Register(r *mux.Router, base string) {
 
 func getBase(w http.ResponseWriter, r *http.Request) {
 	res := hal.NewResource(&model.None{}, Url(baseUrl, ""))
-	res.AddNewLink("v1", Url(baseUrl, "/v1"))
+	res.AddNewLink("v1", Url(baseUrl, "v1"))
 	util.RespondJson(w, res)
 }

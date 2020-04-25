@@ -12,7 +12,7 @@ import (
 
 const protocol = "http"
 const host = "localhost"
-const port = "8082"
+const port = "3557"
 
 const request = `
 {
@@ -29,6 +29,14 @@ func TestDeployments(t *testing.T) {
 	getDeployments()
 }
 
+func TestDeleteLegacy(t *testing.T) {
+	deploymentRequest := config.ParseJson([]byte(request))
+	log.Printf("%v\n", deploymentRequest)
+
+	deleteDeployments([]byte(request))
+	getDeployments()
+}
+
 func getDeployments() {
 	call(func() (response *http.Response, e error) {
 		return http.Get(deploymentsUrl())
@@ -40,6 +48,18 @@ func getDeployments() {
 func postDeployments(payload []byte) {
 	call(func() (response *http.Response, e error) {
 		return http.Post(deploymentsUrl(), "application/json", bytes.NewBuffer(payload))
+	}, func(body []byte) {
+		fmt.Printf("%s\n", body)
+	})
+}
+
+func deleteDeployments(payload []byte) {
+	call(func() (response *http.Response, e error) {
+		req, err := http.NewRequest(http.MethodDelete, deploymentsUrl(), bytes.NewBuffer(payload))
+		if err != nil {
+			log.Fatalf("Error on delete: %v", err)
+		}
+		return http.DefaultClient.Do(req)
 	}, func(body []byte) {
 		fmt.Printf("%s\n", body)
 	})

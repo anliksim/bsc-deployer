@@ -3,6 +3,7 @@ package kubectl
 import (
 	"bytes"
 	"fmt"
+	"github.com/anliksim/bsc-deployer/appctl"
 	"log"
 	"os/exec"
 	"strings"
@@ -39,20 +40,6 @@ func DeployAppsForPublic() {
 	kubectl(true, "delete", "-f", appPath, "-R", "-l", nonCloudSelector)
 }
 
-// runs kubectl apply in dry run for legacy apps to get
-// the json representation of all the descriptors
-func GetLegacyDescriptorsAsJson() string {
-	return kubectlStr(true, "apply -f "+appPath+" -R -l cloud-legacy=supported -o json --dry-run=true")
-}
-
-func SetDarkGray() {
-	fmt.Printf("\033[1;30m")
-}
-
-func SetNoColor() {
-	fmt.Printf("\033[0m")
-}
-
 func SetContext(context string) string {
 	return kubectl(true, "config", "use-context", context)
 }
@@ -74,6 +61,12 @@ func RedeployPolicies() {
 	ApplyFileToNamespace(filePath+"/definitions/policy-private.yaml", "monitoring")
 	ApplyFileToNamespace(filePath+"/definitions/policy-private-or-public.yaml", "rest")
 	ApplyFileToNamespace(filePath+"/definitions/policy-private-and-public.yaml", "rest-ha")
+}
+
+// runs kubectl apply in dry run for legacy apps to get
+// the json representation of all the descriptors
+func GetLegacyDescriptorsAsJson(path string) string {
+	return kubectl(false, "apply", "-f", path, "-R", "-l", "cloud-legacy=supported", "-o", "json", "--dry-run=true")
 }
 
 func GetAllCpol() string {
@@ -118,13 +111,13 @@ func kubectl(logOutput bool, arg ...string) string {
 	}
 	outString := strings.Trim(outb.String(), "\n")
 	if logOutput {
-		SetDarkGray()
+		appctl.SetDarkGray()
 		if outString == "" {
 			fmt.Println("Done")
 		} else {
 			fmt.Println(outString)
 		}
-		SetNoColor()
+		appctl.SetNoColor()
 	}
 	return outString
 }

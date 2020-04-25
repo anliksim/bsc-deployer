@@ -10,16 +10,17 @@ import (
 	"time"
 )
 
-const baseUrl = "http://localhost:8082"
+const port = ":3557"
+const baseUrl = "http://localhost" + port
 
 func main() {
 	errorChain := alice.New(loggerHandler, recoverHandler)
 	r := mux.NewRouter()
-	http.Handle("/", errorChain.Then(r))
+	http.Handle(api.Base, errorChain.Then(r))
 	api.Register(r, baseUrl)
 	apiv1.Register(r, baseUrl)
-	log.Printf("Starting server at localhost:8082")
-	if err := http.ListenAndServe(":8082", nil); err != nil {
+	log.Printf("Starting server at " + baseUrl)
+	if err := http.ListenAndServe(port, nil); err != nil {
 		log.Fatalf("Error starting deployer: %v", err)
 	}
 }
