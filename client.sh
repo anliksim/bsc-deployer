@@ -19,7 +19,7 @@ case "$1" in
 esac
 
 headRev=$(git log --pretty=format:'%h %s' --abbrev-commit -1)
-workdir=$(dirname `pwd`)
+workdir=$(dirname "$(pwd)")
 data=$(to_json "$headRev" "$workdir/bsc-env/apps")
 
 out=$(curl -k -sS -X $http_method "http://localhost:3557/v1/deployments" --data "$data")
