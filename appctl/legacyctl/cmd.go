@@ -2,25 +2,25 @@ package legacyctl
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/anliksim/bsc-deployer/appctl"
 	"github.com/anliksim/bsc-deployer/appctl/kubectl"
+	"github.com/anliksim/bsc-deployer/config"
+	"github.com/anliksim/bsc-deployer/util"
 	"io/ioutil"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	"log"
 	"net/http"
 	"strings"
 )
 
-const appPath = "/home/anliksim/codebase/bsc-env/apps"
+func appsPath(dirPath string) string {
+	return dirPath + "/apps"
+}
 
-func Apply() {
-	jsonString := kubectl.GetLegacyDescriptorsAsJson(appPath)
+func Apply(dirPath string) {
+	jsonString := kubectl.GetLegacyDescriptorsAsJson(appsPath(dirPath))
 	// multiple Deployments are returned as part of kind List by kubectl
 	if strings.Contains(jsonString, "List") {
-		ForEachDeploymentInList([]byte(jsonString), func(payload []byte) {
+		config.ForEachItemInList([]byte(jsonString), func(payload []byte) {
 			runDeployment(payload)
 		})
 	} else {
@@ -28,11 +28,11 @@ func Apply() {
 	}
 }
 
-func Delete() {
-	jsonString := kubectl.GetLegacyDescriptorsAsJson(appPath)
+func Delete(dirPath string) {
+	jsonString := kubectl.GetLegacyDescriptorsAsJson(appsPath(dirPath))
 	// multiple Deployments are returned as part of kind List by kubectl
 	if strings.Contains(jsonString, "List") {
-		ForEachDeploymentInList([]byte(jsonString), func(payload []byte) {
+		config.ForEachItemInList([]byte(jsonString), func(payload []byte) {
 			runStop(payload)
 		})
 	} else {
@@ -40,26 +40,8 @@ func Delete() {
 	}
 }
 
-func ForEachDeploymentInList(jsonContent []byte, deploymentHandler func([]byte)) {
-	list := new(v1.List)
-	if err := json.Unmarshal(jsonContent, &list); err != nil {
-		log.Fatalf("Error during unmarshal: %v", err)
-	}
-	for _, c := range list.Items {
-		deploymentHandler(c.Raw)
-	}
-}
-
-func JsonToDeployment(jsonContent []byte) *appsv1.Deployment {
-	deployment := new(appsv1.Deployment)
-	if err := json.Unmarshal(jsonContent, &deployment); err != nil {
-		log.Fatalf("Error during unmarshal: %v", err)
-	}
-	return deployment
-}
-
 func runStop(payload []byte) {
-	deployment := JsonToDeployment(payload)
+	deployment := config.JsonToDeployment(payload)
 	name := deployment.Name
 	host := deployment.Spec.Template.Annotations["legacy/host"]
 	log.Printf("Deleting apps from %s...", host)
@@ -67,7 +49,7 @@ func runStop(payload []byte) {
 }
 
 func runDeployment(payload []byte) {
-	deployment := JsonToDeployment(payload)
+	deployment := config.JsonToDeployment(payload)
 	host := deployment.Spec.Template.Annotations["legacy/host"]
 	log.Printf("Deploying to %s...", host)
 	postProcesses(host, payload)
@@ -94,9 +76,9 @@ func deleteProcess(host string, name string) {
 }
 
 func printResponse(body []byte) {
-	appctl.SetDarkGray()
+	util.SetDarkGray()
 	fmt.Printf("%s\n", body)
-	appctl.SetNoColor()
+	util.SetNoColor()
 }
 
 func call(httpCall func() (*http.Response, error), callback func([]byte)) {
