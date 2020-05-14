@@ -12,8 +12,8 @@ const privateContext = "minikube"
 const publicContext = "bsc-aks"
 
 const groupLabel = "cloud-group"
-const privateLabel = "cloud-private"
-const publicLabel = "cloud-public"
+const privateLabel = "cloud-" + privateContext
+const publicLabel = "cloud-" + publicContext
 
 const supportedValue = "supported"
 const eqSelector = "%s==%s"
