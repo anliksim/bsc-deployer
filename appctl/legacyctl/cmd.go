@@ -84,7 +84,7 @@ func printResponse(body []byte) {
 func call(httpCall func() (*http.Response, error), callback func([]byte)) {
 	resp, err := httpCall()
 	if err != nil {
-		log.Fatalf("Error on get: %v", err)
+		log.Printf("Error on get: %v", err)
 	}
 	handle(resp, callback)
 }

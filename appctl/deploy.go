@@ -10,14 +10,14 @@ import (
 
 const privateContext = "minikube"
 const publicContext = "bsc-aks"
-
 const groupLabel = "cloud-group"
-const privateLabel = "cloud-" + privateContext
-const publicLabel = "cloud-" + publicContext
-
+const cloudEnvLabel = "cloud-env-%s"
 const supportedValue = "supported"
 const eqSelector = "%s==%s"
 const neSelector = "%s!=%s"
+
+var privateLabel = fmt.Sprintf(cloudEnvLabel, privateContext)
+var publicLabel = fmt.Sprintf(cloudEnvLabel, publicContext)
 
 var privateSelector = fmt.Sprintf(eqSelector, privateLabel, supportedValue)
 var notPrivateSelector = fmt.Sprintf(neSelector, privateLabel, supportedValue)
@@ -27,9 +27,8 @@ var notPublicSelector = fmt.Sprintf(neSelector, publicLabel, supportedValue)
 func DeployAll(dirPath string) {
 	deployCloud(dirPath)
 	legacyctl.Apply(dirPath)
-
 	// switch to private for safety reasons
-	kubectl.SetContext(privateContext)
+	_, _ = kubectl.SetContext(privateContext)
 }
 
 func DeleteAll(dirPath string) {
@@ -39,7 +38,7 @@ func DeleteAll(dirPath string) {
 	legacyctl.Delete(dirPath)
 
 	// switch to private for safety reasons
-	kubectl.SetContext(privateContext)
+	_, _ = kubectl.SetContext(privateContext)
 }
 
 func deployCloud(dirPath string) {
@@ -50,20 +49,26 @@ func deployCloud(dirPath string) {
 
 // requires k8s 1.60.0 server version
 func deployPolicies(dirPath string) {
-	kubectl.SetContext(privateContext)
-	kubectl.SetUpNamespaces(dirPath)
-	kubectl.DeployPolicies(dirPath)
-	// Azure AKS runs v1.15.10
-	// thus skipping public cloud
+	if _, err := kubectl.SetContext(publicContext); err == nil {
+		kubectl.SetUpNamespaces(dirPath)
+		// Azure AKS runs v1.15.10
+		// thus skipping public cloud
+	}
+	if _, err := kubectl.SetContext(privateContext); err == nil {
+		kubectl.SetUpNamespaces(dirPath)
+		kubectl.DeployPolicies(dirPath)
+	}
 }
 
 func checkVersions() {
-	log.Print("Public cloud version:")
-	kubectl.SetContext(publicContext)
-	kubectl.ShortVersion()
-	log.Print("Private cloud version:")
-	kubectl.SetContext(privateContext)
-	kubectl.ShortVersion()
+	if _, err := kubectl.SetContext(publicContext); err == nil {
+		log.Print("Public cloud version:")
+		kubectl.ShortVersion()
+	}
+	if _, err := kubectl.SetContext(privateContext); err == nil {
+		log.Print("Private cloud version:")
+		kubectl.ShortVersion()
+	}
 }
 
 func appsPath(dirPath string) string {
@@ -96,7 +101,7 @@ func deployApps(dirPath string) {
 	appPath := appsPath(dirPath)
 	strategies := kubectl.GetDeploymentStrategies()
 	for cg, labels := range strategies {
-		log.Printf("Deploying cloud group %s to %v...", labels, cg)
+		log.Printf("Deploying cloud group %s to %s...", cg, labels)
 
 		labelString := strings.Join(labels, " ")
 		cgSelector := fmt.Sprintf(eqSelector, groupLabel, cg)
@@ -110,53 +115,61 @@ func deployApps(dirPath string) {
 		if hasPrivate(labelString) && hasPublic(labelString) {
 
 			// deploy apps to private
-			kubectl.SetContext(privateContext)
-			kubectl.ApplyWithSelector(appPath, privateForGroup)
-			// delete apps in case private changed to unsupported
-			kubectl.DeleteWithSelector(appPath, notPrivateForGroup)
+			if _, err := kubectl.SetContext(privateContext); err == nil {
+				kubectl.ApplyWithSelector(appPath, privateForGroup)
+				// delete apps in case private changed to unsupported
+				kubectl.DeleteWithSelector(appPath, notPrivateForGroup)
+			}
 
 			// deploy apps to public
-			kubectl.SetContext(publicContext)
-			kubectl.ApplyWithSelector(appPath, publicForGroup)
-			// delete apps in case public changed to unsupported
-			kubectl.DeleteWithSelector(appPath, notPublicForGroup)
+			if _, err := kubectl.SetContext(publicContext); err == nil {
+				kubectl.ApplyWithSelector(appPath, publicForGroup)
+				// delete apps in case public changed to unsupported
+				kubectl.DeleteWithSelector(appPath, notPublicForGroup)
+			}
 
 			// handle private only policy
 		} else if hasPrivate(labelString) {
 
 			// deploy apps to private
-			kubectl.SetContext(privateContext)
-			kubectl.ApplyWithSelector(appPath, privateForGroup)
-			// delete apps in case private changed to unsupported
-			kubectl.DeleteWithSelector(appPath, notPrivateForGroup)
+			if _, err := kubectl.SetContext(privateContext); err == nil {
+				kubectl.ApplyWithSelector(appPath, privateForGroup)
+				// delete apps in case private changed to unsupported
+				kubectl.DeleteWithSelector(appPath, notPrivateForGroup)
+			}
 
 			// delete apps in case it was on public before
-			kubectl.SetContext(publicContext)
-			kubectl.DeleteWithSelector(appPath, cgSelector)
+			if _, err := kubectl.SetContext(publicContext); err == nil {
+				kubectl.DeleteWithSelector(appPath, cgSelector)
+			}
 
 			// handle public only policy
 		} else if hasPublic(labelString) {
 
 			// deploy apps to public
-			kubectl.SetContext(publicContext)
-			kubectl.ApplyWithSelector(appPath, publicForGroup)
-			// delete apps in case public changed to unsupported
-			kubectl.DeleteWithSelector(appPath, notPublicForGroup)
+			if _, err := kubectl.SetContext(publicContext); err == nil {
+				kubectl.ApplyWithSelector(appPath, publicForGroup)
+				// delete apps in case public changed to unsupported
+				kubectl.DeleteWithSelector(appPath, notPublicForGroup)
+			}
 
 			// delete apps in case it was on private before
-			kubectl.SetContext(privateContext)
-			kubectl.DeleteWithSelector(appPath, cgSelector)
+			if _, err := kubectl.SetContext(privateContext); err == nil {
+				kubectl.DeleteWithSelector(appPath, cgSelector)
+			}
 
 			//	handle none policy
 		} else {
 
 			// delete apps in case it was on private before
-			kubectl.SetContext(privateContext)
-			kubectl.DeleteWithSelector(appPath, cgSelector)
+			if _, err := kubectl.SetContext(privateContext); err == nil {
+				kubectl.DeleteWithSelector(appPath, cgSelector)
+			}
 
 			// delete apps in case it was on public before
-			kubectl.SetContext(publicContext)
-			kubectl.DeleteWithSelector(appPath, cgSelector)
+			if _, err := kubectl.SetContext(publicContext); err == nil {
+				kubectl.DeleteWithSelector(appPath, cgSelector)
+			}
 		}
 	}
 }

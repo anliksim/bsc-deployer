@@ -1,6 +1,7 @@
 package apiv1
 
 import (
+	"fmt"
 	"github.com/anliksim/bsc-deployer/api"
 	"github.com/anliksim/bsc-deployer/appctl"
 	"github.com/anliksim/bsc-deployer/config"
@@ -9,6 +10,8 @@ import (
 	"github.com/anliksim/bsc-deployer/util"
 	"github.com/gorilla/mux"
 	"github.com/nvellon/hal"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/push"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,6 +21,11 @@ import (
 var baseUrl string
 
 var deployments = make(map[time.Time]string)
+
+var running = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "cloud_deployments",
+	Help: "Captures cloud deployment runs",
+})
 
 func Register(r *mux.Router, base string) {
 	baseUrl = base
@@ -64,9 +72,22 @@ func postDeploy(w http.ResponseWriter, r *http.Request) {
 	deployments[now] = "apply: " + deployData.Rev
 
 	// async
-	go appctl.DeployAll(deployData.Dir)
+	go deploy(deployData, now)
 
 	util.Respond(w, now.Format("2006-01-02 15:04:05"))
+}
+
+func deploy(data *config.DeploymentData, time time.Time) {
+	// register deployment in prometheus via pushgateway
+	running.SetToCurrentTime()
+	if err := push.New("192.168.39.171:30007", data.Rev).
+		Collector(running).
+		Grouping("timestamp", time.Format("2006-01-02 15:04:05")).
+		Add(); err != nil {
+		fmt.Println("Failed to register deployment:", err)
+	}
+	// run deployment
+	appctl.DeployAll(data.Dir)
 }
 
 func deleteDeploy(w http.ResponseWriter, r *http.Request) {
