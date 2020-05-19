@@ -173,3 +173,16 @@ func kubectlOpts(logOutput bool, failOnError bool, arg ...string) (string, error
 	}
 	return outString, err
 }
+
+func GetPushGatewayUrl() string {
+	cmd := exec.Command("minikube", "service", "--namespace=monitoring", "prometheus-pushgateway", "--url")
+	var outb, errb bytes.Buffer
+	cmd.Stdout = &outb
+	cmd.Stderr = &errb
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("Error getting pushgatway url: %v\n Stderr: %s", err, errb.String())
+	}
+	outString := strings.Trim(outb.String(), "\n")
+	return outString
+}

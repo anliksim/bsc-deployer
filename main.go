@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const version = "v0.7"
+const version = "v0.8"
 const port = ":3557"
 const baseUrl = "http://localhost" + port
 

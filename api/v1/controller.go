@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/anliksim/bsc-deployer/api"
 	"github.com/anliksim/bsc-deployer/appctl"
+	"github.com/anliksim/bsc-deployer/appctl/kubectl"
 	"github.com/anliksim/bsc-deployer/config"
 	"github.com/anliksim/bsc-deployer/model"
 	modelv1 "github.com/anliksim/bsc-deployer/model/v1"
@@ -78,16 +79,18 @@ func postDeploy(w http.ResponseWriter, r *http.Request) {
 }
 
 func deploy(data *config.DeploymentData, time time.Time) {
-	// register deployment in prometheus via pushgateway
+	// set deployment timestamp
 	running.SetToCurrentTime()
-	if err := push.New("192.168.39.171:30007", data.Rev).
+	// run deployment
+	appctl.DeployAll(data.Dir)
+	// register deployment in prometheus via pushgateway
+
+	if err := push.New(kubectl.GetPushGatewayUrl(), data.Rev).
 		Collector(running).
 		Grouping("timestamp", time.Format("2006-01-02 15:04:05")).
 		Add(); err != nil {
 		fmt.Println("Failed to register deployment:", err)
 	}
-	// run deployment
-	appctl.DeployAll(data.Dir)
 }
 
 func deleteDeploy(w http.ResponseWriter, r *http.Request) {
