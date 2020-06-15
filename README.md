@@ -2,6 +2,16 @@
 
 deployer component with http endpoint for webhooks
 
+## Content
+```
+.           (deployer codebase)
+├── api     (deployer api)
+├── appctl  (kube- and legacyctl wrapper)
+├── config  (commons for configs)
+├── model   (deployer model)
+├── test    (integration tests)
+└── util    (utilities)
+```
 
 ## Usage 
 
