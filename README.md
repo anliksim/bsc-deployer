@@ -1,5 +1,8 @@
 # deployer
 
+> Moved to https://github.com/hybridcloudops
+
+
 deployer component with http endpoint for webhooks
 
 ## Content
